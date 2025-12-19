@@ -200,25 +200,31 @@ export const addRecord = async (
   record: OilChangeRecord
 ): Promise<AppData> => {
   try {
-    const { error: insertError } = await supabase.from('oil_change_records').insert({
-      id: record.id,
-      car_id: carId,
-      date: record.date,
-      mileage_at_change: record.mileageAtChange,
-      interval_km: record.intervalKm,
-      interval_months: record.intervalMonths,
-      next_change_mileage: record.nextChangeMileage,
-      next_change_date: record.nextChangeDate,
-      oil_type: record.oilType ?? null,
-      note: record.note ?? null,
-      service_type: record.serviceType ?? 'oil_change',
-    });
+    // Insert record and get the inserted data back
+    const { data: insertedRecord, error: insertError } = await supabase
+      .from('oil_change_records')
+      .insert({
+        id: record.id,
+        car_id: carId,
+        date: record.date,
+        mileage_at_change: record.mileageAtChange,
+        interval_km: record.intervalKm,
+        interval_months: record.intervalMonths,
+        next_change_mileage: record.nextChangeMileage,
+        next_change_date: record.nextChangeDate,
+        oil_type: record.oilType ?? null,
+        note: record.note ?? null,
+        service_type: record.serviceType ?? 'oil_change',
+      })
+      .select()
+      .single();
 
     if (insertError) {
       console.error('Error inserting oil change record', insertError);
       throw insertError;
     }
 
+    // Update car mileage
     const { error: updateError } = await supabase
       .from('cars')
       .update({
@@ -230,9 +236,16 @@ export const addRecord = async (
 
     if (updateError) {
       console.error('Error updating car after record insert', updateError);
+      // Continue anyway - the record was inserted successfully
     }
 
-    return await getAppData(userId, carId);
+    // Wait a tiny bit to ensure database consistency, then fetch fresh data
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    
+    // Fetch fresh data from database
+    const freshData = await getAppData(userId, carId);
+    
+    return freshData;
   } catch (error) {
     console.error('Unexpected error adding record', error);
     throw error;

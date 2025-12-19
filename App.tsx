@@ -158,19 +158,27 @@ const App: React.FC = () => {
     try {
       setLoading(true);
       const newData = await addRecordRemote(user.id, data.car.id, record);
-      setData({ ...newData });
+      
+      // Force update with fresh data
+      setData(newData);
+      
+      // Also refresh cars list in case mileage changed
+      const userCars = await getUserCars(user.id);
+      setCars(userCars);
 
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('تعویض روغن ثبت شد', {
-          body: `تعویض بعدی در کیلومتر ${record.nextChangeMileage.toLocaleString()}`,
+        new Notification('سرویس ثبت شد', {
+          body: `سرویس بعدی در کیلومتر ${record.nextChangeMileage.toLocaleString()}`,
           dir: 'rtl',
         });
       } else if ('Notification' in window && Notification.permission !== 'denied') {
         Notification.requestPermission();
       }
 
-      // Open Google Calendar with a pre-filled reminder for next change date
-      openGoogleCalendarReminder(data.car.name, record);
+      // Open Google Calendar with a pre-filled reminder for next change date (only for oil change)
+      if (record.serviceType === 'oil_change' || !record.serviceType) {
+        openGoogleCalendarReminder(data.car.name, record);
+      }
     } catch (error) {
       console.error('Error adding record', error);
       throw error; // Re-throw to let AddServiceModal handle it
