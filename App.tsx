@@ -152,7 +152,9 @@ const App: React.FC = () => {
   };
 
   const handleAddRecord = async (record: OilChangeRecord) => {
-    if (!user || !data?.car) return;
+    if (!user || !data?.car) {
+      throw new Error('کاربر یا خودرو یافت نشد');
+    }
     try {
       setLoading(true);
       const newData = await addRecordRemote(user.id, data.car.id, record);
@@ -171,6 +173,7 @@ const App: React.FC = () => {
       openGoogleCalendarReminder(data.car.name, record);
     } catch (error) {
       console.error('Error adding record', error);
+      throw error; // Re-throw to let AddServiceModal handle it
     } finally {
       setLoading(false);
     }

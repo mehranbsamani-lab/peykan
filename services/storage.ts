@@ -98,6 +98,7 @@ export const getAppData = async (userId: string, carId?: string | null): Promise
         nextChangeDate: r.next_change_date,
         oilType: r.oil_type ?? undefined,
         note: r.note ?? undefined,
+        serviceType: (r.service_type as any) ?? 'oil_change',
       })) ?? [];
 
     return { car, history };
@@ -210,6 +211,7 @@ export const addRecord = async (
       next_change_date: record.nextChangeDate,
       oil_type: record.oilType ?? null,
       note: record.note ?? null,
+      service_type: record.serviceType ?? 'oil_change',
     });
 
     if (insertError) {

@@ -7,6 +7,8 @@ export interface Car {
   lastUpdated: string; // ISO Date
 }
 
+export type ServiceType = 'oil_change' | 'air_filter' | 'coolant' | 'brake_fluid';
+
 export interface OilChangeRecord {
   id: string;
   date: string; // ISO Date
@@ -18,6 +20,8 @@ export interface OilChangeRecord {
   note?: string;
   /** نوع روغن استفاده‌شده، مثلا بهران، لوکومولی و ... */
   oilType?: string;
+  /** نوع سرویس: تعویض روغن، فیلتر هوا، ضد یخ، روغن ترمز */
+  serviceType?: ServiceType;
 }
 
 export interface AppData {

@@ -3,8 +3,10 @@ import { AppData, Car, OilChangeRecord } from '../types';
 import { Button } from './Button';
 import { AddServiceModal } from './AddServiceModal';
 import { UpdateMileageModal } from './UpdateMileageModal';
-import { Droplets, Gauge, History, AlertTriangle, Calendar, Plus, Edit3, LogOut, Pencil } from 'lucide-react';
+import { Droplets, Gauge, History, AlertTriangle, Calendar, Plus, Edit3, LogOut, Pencil, Menu, X } from 'lucide-react';
 import { useClerk } from '@clerk/clerk-react';
+import { toPersianDateFull } from '../utils/dateUtils';
+import { SERVICE_TYPE_OPTIONS } from '../constants';
 
 interface DashboardProps {
   data: AppData;
@@ -30,20 +32,29 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [isServiceModalOpen, setServiceModalOpen] = useState(false);
   const [isMileageModalOpen, setMileageModalOpen] = useState(false);
   const [isCarMenuOpen, setCarMenuOpen] = useState(false);
+  const [isHamburgerMenuOpen, setIsHamburgerMenuOpen] = useState(false);
   const { signOut } = useClerk();
 
   const lastRecord = data.history.length > 0 ? data.history[0] : null;
+  const lastOilChangeRecord = data.history.find(
+    (r) => !r.serviceType || r.serviceType === 'oil_change'
+  );
 
-  // Calculations
+  // Calculations - فقط برای تعویض روغن
   const status = useMemo(() => {
-    if (!lastRecord || !data.car) return { type: 'unknown', text: 'هنوز سرویسی ثبت نشده' };
+    // پیدا کردن آخرین سرویس تعویض روغن
+    const lastOilChange = data.history.find(
+      (r) => !r.serviceType || r.serviceType === 'oil_change'
+    );
 
-    const kmDriven = data.car.currentMileage - lastRecord.mileageAtChange;
-    const kmRemaining = lastRecord.intervalKm - kmDriven;
-    const percentUsed = Math.min(100, Math.max(0, (kmDriven / lastRecord.intervalKm) * 100));
+    if (!lastOilChange || !data.car) return { type: 'unknown', text: 'هنوز سرویسی ثبت نشده' };
+
+    const kmDriven = data.car.currentMileage - lastOilChange.mileageAtChange;
+    const kmRemaining = lastOilChange.intervalKm - kmDriven;
+    const percentUsed = Math.min(100, Math.max(0, (kmDriven / lastOilChange.intervalKm) * 100));
     
     // Date Calc
-    const daysRemaining = Math.ceil((new Date(lastRecord.nextChangeDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+    const daysRemaining = Math.ceil((new Date(lastOilChange.nextChangeDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
 
     let statusType: 'good' | 'warning' | 'danger' = 'good';
     if (kmRemaining <= 0 || daysRemaining <= 0) statusType = 'danger';
@@ -55,10 +66,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
       kmDriven,
       percentUsed,
       daysRemaining,
-      nextDate: new Date(lastRecord.nextChangeDate).toLocaleDateString('fa-IR'),
-      nextKm: lastRecord.nextChangeMileage
+      nextDate: toPersianDateFull(lastOilChange.nextChangeDate),
+      nextKm: lastOilChange.nextChangeMileage
     };
-  }, [data.car, lastRecord]);
+  }, [data.car, data.history]);
 
   const getStatusColor = (type: string) => {
     switch (type) {
@@ -136,24 +147,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onAddNewCar}
-              className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 hover:bg-slate-50 active:scale-95 transition"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>افزودن خودروی جدید</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => signOut()}
-              className="hidden sm:inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-500 hover:bg-slate-50 active:scale-95 transition"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>خروج</span>
-            </button>
-          </div>
+          {/* Hamburger Menu Button */}
+          <button
+            type="button"
+            onClick={() => setIsHamburgerMenuOpen(!isHamburgerMenuOpen)}
+            className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition active:scale-95"
+          >
+            {isHamburgerMenuOpen ? (
+              <X className="w-5 h-5 text-slate-700" />
+            ) : (
+              <Menu className="w-5 h-5 text-slate-700" />
+            )}
+          </button>
           <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
             <Droplets className="w-6 h-6 text-blue-600" />
           </div>
@@ -250,7 +255,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
             <span className="text-sm font-medium text-slate-700">نوع روغن</span>
             <span className="text-xs text-slate-500">
-              {lastRecord?.oilType ?? 'ثبت نشده'}
+              {lastOilChangeRecord?.oilType ?? 'ثبت نشده'}
             </span>
           </div>
         </div>
@@ -315,26 +320,156 @@ export const Dashboard: React.FC<DashboardProps> = ({
               تاریخچه
             </h3>
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-100">
-              {data.history.slice(0, 3).map((record) => (
-                <div key={record.id} className="p-4 flex justify-between items-center">
-                  <div className="flex flex-col">
-                    <span className="font-bold text-slate-800">
-                      {new Date(record.date).toLocaleDateString('fa-IR')}
-                    </span>
-                    <span className="text-xs text-slate-400 mt-1">
-                      در کیلومتر {record.mileageAtChange.toLocaleString()}
-                    </span>
+              {data.history.slice(0, 3).map((record) => {
+                const serviceLabel = SERVICE_TYPE_OPTIONS.find(
+                  (opt) => opt.value === (record.serviceType || 'oil_change')
+                )?.label || 'تعویض روغن';
+                return (
+                  <div key={record.id} className="p-4 flex justify-between items-center">
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-800">
+                          {toPersianDateFull(record.date)}
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
+                          {serviceLabel}
+                        </span>
+                      </div>
+                      <span className="text-xs text-slate-400 mt-1">
+                        در کیلومتر {record.mileageAtChange.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="text-xs bg-slate-100 px-2 py-1 rounded-lg text-slate-600">
+                      {record.intervalKm.toLocaleString()} km
+                    </div>
                   </div>
-                  <div className="text-xs bg-slate-100 px-2 py-1 rounded-lg text-slate-600">
-                    {record.intervalKm.toLocaleString()} km
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
 
       </main>
+
+      {/* Hamburger Menu Overlay */}
+      {isHamburgerMenuOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/40 z-40"
+            onClick={() => setIsHamburgerMenuOpen(false)}
+          />
+          {/* Menu Panel */}
+          <div className="fixed top-0 right-0 h-full w-72 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-out">
+            <div className="flex flex-col h-full">
+              {/* Header */}
+              <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-slate-900">منو</h3>
+                <button
+                  type="button"
+                  onClick={() => setIsHamburgerMenuOpen(false)}
+                  className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition"
+                >
+                  <X className="w-5 h-5 text-slate-600" />
+                </button>
+              </div>
+
+              {/* Menu Items */}
+              <div className="flex-1 overflow-y-auto py-4">
+                <div className="space-y-1 px-4">
+                  {/* افزودن خودروی جدید */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsHamburgerMenuOpen(false);
+                      onAddNewCar();
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 transition text-right"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                      <Plus className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-slate-800">افزودن خودروی جدید</div>
+                      <div className="text-xs text-slate-500 mt-0.5">ثبت خودروی جدید</div>
+                    </div>
+                  </button>
+
+                  {/* آپدیت کیلومتر */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsHamburgerMenuOpen(false);
+                      setMileageModalOpen(true);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 transition text-right"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center">
+                      <Gauge className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-slate-800">بروزرسانی کیلومتر</div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        {data.car?.currentMileage.toLocaleString()} km
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* تاریخچه کامل */}
+                  {data.history.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsHamburgerMenuOpen(false);
+                        // می‌تونی بعداً یک صفحه تاریخچه کامل اضافه کنی
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-50 transition text-right"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center">
+                        <History className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-slate-800">تاریخچه کامل</div>
+                        <div className="text-xs text-slate-500 mt-0.5">
+                          {data.history.length} سرویس ثبت شده
+                        </div>
+                      </div>
+                    </button>
+                  )}
+
+                  {/* Divider */}
+                  <div className="my-2 border-t border-slate-200" />
+
+                  {/* خروج */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsHamburgerMenuOpen(false);
+                      signOut();
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 transition text-right"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                      <LogOut className="w-5 h-5 text-red-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-red-600">خروج از حساب</div>
+                      <div className="text-xs text-red-400 mt-0.5">خروج از حساب کاربری</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-slate-200">
+                <div className="text-xs text-slate-400 text-center">
+                  تعویض روغن یار
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Floating Action Button (Alternative to button in card) */}
       <button 

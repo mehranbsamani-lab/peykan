@@ -18,6 +18,14 @@ export const CAR_CATEGORY_OPTIONS: string[] = [
 // ثابت: انواع روغن پیش‌فرض
 export const OIL_TYPE_OPTIONS: string[] = ['بهران', 'لوکومولی'];
 
+// ثابت: انواع سرویس
+export const SERVICE_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'oil_change', label: 'تعویض روغن' },
+  { value: 'air_filter', label: 'فیلتر هوا' },
+  { value: 'coolant', label: 'ضد یخ' },
+  { value: 'brake_fluid', label: 'روغن ترمز' },
+];
+
 export const DATE_OPTIONS: Intl.DateTimeFormatOptions = {
   year: 'numeric',
   month: 'long',
