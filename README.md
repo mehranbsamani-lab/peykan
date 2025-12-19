@@ -51,3 +51,4 @@ npm run build
 4. Deploy کنید!
 
 Vercel به صورت خودکار `vite build` را اجرا می‌کند و از `dist` به عنوان output directory استفاده می‌کند.
+# peykan
