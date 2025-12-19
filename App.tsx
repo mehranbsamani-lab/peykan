@@ -6,6 +6,7 @@ import {
   getUserCars,
   createCarForUser,
   updateCarMileage as updateCarMileageRemote,
+  updateCar as updateCarRemote,
   addRecord as addRecordRemote,
 } from './services/storage';
 import { Onboarding } from './components/Onboarding';
@@ -43,6 +44,7 @@ const App: React.FC = () => {
   const [cars, setCars] = useState<Car[]>([]);
   const [currentCarId, setCurrentCarId] = useState<string | null>(null);
   const [isAddCarModalOpen, setAddCarModalOpen] = useState(false);
+  const [editingCar, setEditingCar] = useState<Car | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -109,21 +111,44 @@ const App: React.FC = () => {
     if (!user) return;
     try {
       setLoading(true);
-      await createCarForUser(user.id, car);
-      const userCars = await getUserCars(user.id);
-      setCars(userCars);
-      const lastCar = userCars[userCars.length - 1];
-      setCurrentCarId(lastCar?.id ?? null);
-      const newData = await getAppData(user.id, lastCar?.id);
-      if (newData) {
-        setData(newData);
+      if (editingCar) {
+        // ویرایش خودروی موجود
+        await updateCarRemote(user.id, car.id, {
+          name: car.name,
+          category: car.category,
+          currentMileage: car.currentMileage,
+        });
+        const userCars = await getUserCars(user.id);
+        setCars(userCars);
+        // اگر خودروی ویرایش شده همان خودروی فعال است، داده‌ها را به‌روزرسانی کن
+        if (car.id === currentCarId) {
+          const updatedData = await getAppData(user.id, car.id);
+          setData(updatedData);
+        }
+        setEditingCar(null);
+      } else {
+        // افزودن خودروی جدید
+        await createCarForUser(user.id, car);
+        const userCars = await getUserCars(user.id);
+        setCars(userCars);
+        const lastCar = userCars[userCars.length - 1];
+        setCurrentCarId(lastCar?.id ?? null);
+        const newData = await getAppData(user.id, lastCar?.id);
+        if (newData) {
+          setData(newData);
+        }
       }
       setAddCarModalOpen(false);
     } catch (error) {
-      console.error('Error adding new car', error);
+      console.error('Error saving car', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditCar = (car: Car) => {
+    setEditingCar(car);
+    setAddCarModalOpen(true);
   };
 
   const handleAddRecord = async (record: OilChangeRecord) => {
@@ -213,11 +238,16 @@ const App: React.FC = () => {
         onUpdateMileage={handleUpdateMileage}
         onSelectCar={handleSelectCar}
         onAddNewCar={handleAddNewCarClick}
+        onEditCar={handleEditCar}
       />
       <AddCarModal
         isOpen={isAddCarModalOpen}
-        onClose={() => setAddCarModalOpen(false)}
+        onClose={() => {
+          setAddCarModalOpen(false);
+          setEditingCar(null);
+        }}
         onSave={handleAddCarFromModal}
+        editingCar={editingCar}
       />
     </div>
   );

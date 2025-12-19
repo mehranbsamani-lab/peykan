@@ -3,7 +3,7 @@ import { AppData, Car, OilChangeRecord } from '../types';
 import { Button } from './Button';
 import { AddServiceModal } from './AddServiceModal';
 import { UpdateMileageModal } from './UpdateMileageModal';
-import { Droplets, Gauge, History, AlertTriangle, Calendar, Plus, Edit3, LogOut } from 'lucide-react';
+import { Droplets, Gauge, History, AlertTriangle, Calendar, Plus, Edit3, LogOut, Pencil } from 'lucide-react';
 import { useClerk } from '@clerk/clerk-react';
 
 interface DashboardProps {
@@ -14,6 +14,7 @@ interface DashboardProps {
   onUpdateMileage: (mileage: number) => void;
   onSelectCar: (carId: string) => void;
   onAddNewCar: () => void;
+  onEditCar?: (car: Car) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -24,6 +25,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onUpdateMileage,
   onSelectCar,
   onAddNewCar,
+  onEditCar,
 }) => {
   const [isServiceModalOpen, setServiceModalOpen] = useState(false);
   const [isMileageModalOpen, setMileageModalOpen] = useState(false);
@@ -262,27 +264,44 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </h3>
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-100">
               {cars.map((car) => (
-                <button
+                <div
                   key={car.id}
-                  type="button"
-                  onClick={() => onSelectCar(car.id)}
-                  className={`w-full px-4 py-3 flex items-center justify-between text-right ${
+                  className={`w-full px-4 py-3 flex items-center justify-between ${
                     car.id === currentCarId ? 'bg-slate-50' : 'bg-white'
-                  } hover:bg-slate-50 transition`}
+                  }`}
                 >
-                  <div className="flex flex-col items-start">
-                    <span className="font-semibold text-slate-800">{car.name}</span>
-                    <span className="text-[11px] text-slate-500 mt-0.5">
-                      {car.currentMileage.toLocaleString()} km
-                      {car.category ? ` • ${car.category}` : ''}
-                    </span>
-                  </div>
-                  {car.id === currentCarId && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
-                      فعال
-                    </span>
+                  <button
+                    type="button"
+                    onClick={() => onSelectCar(car.id)}
+                    className="flex-1 flex items-center justify-between text-right hover:bg-slate-50 transition rounded-lg px-2 py-1 -mx-2 -my-1"
+                  >
+                    <div className="flex flex-col items-start">
+                      <span className="font-semibold text-slate-800">{car.name}</span>
+                      <span className="text-[11px] text-slate-500 mt-0.5">
+                        {car.currentMileage.toLocaleString()} km
+                        {car.category ? ` • ${car.category}` : ''}
+                      </span>
+                    </div>
+                    {car.id === currentCarId && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
+                        فعال
+                      </span>
+                    )}
+                  </button>
+                  {onEditCar && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditCar(car);
+                      }}
+                      className="ml-2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+                      title="ویرایش خودرو"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
                   )}
-                </button>
+                </div>
               ))}
             </div>
           </div>

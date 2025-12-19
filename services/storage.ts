@@ -161,6 +161,37 @@ export const updateCarMileage = async (
   }
 };
 
+// Update car details (name, category, mileage)
+export const updateCar = async (
+  userId: string,
+  carId: string,
+  updates: { name?: string; category?: string; currentMileage?: number }
+): Promise<void> => {
+  try {
+    const updateData: any = {
+      last_updated: new Date().toISOString(),
+    };
+
+    if (updates.name !== undefined) updateData.name = updates.name;
+    if (updates.category !== undefined) updateData.category = updates.category ?? null;
+    if (updates.currentMileage !== undefined) updateData.current_mileage = updates.currentMileage;
+
+    const { error } = await supabase
+      .from('cars')
+      .update(updateData)
+      .eq('id', carId)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error updating car', error);
+      throw error;
+    }
+  } catch (error) {
+    console.error('Unexpected error updating car', error);
+    throw error;
+  }
+};
+
 // Add an oil change record and update car mileage accordingly
 export const addRecord = async (
   userId: string,

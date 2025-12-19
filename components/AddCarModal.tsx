@@ -9,14 +9,31 @@ interface AddCarModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (car: Car) => void;
+  editingCar?: Car | null;
 }
 
-export const AddCarModal: React.FC<AddCarModalProps> = ({ isOpen, onClose, onSave }) => {
+export const AddCarModal: React.FC<AddCarModalProps> = ({ isOpen, onClose, onSave, editingCar }) => {
   const [name, setName] = useState('');
   const [mileage, setMileage] = useState('');
   const [error, setError] = useState('');
   const [categoryQuery, setCategoryQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
+
+  // وقتی editingCar تغییر می‌کنه، فرم رو پر می‌کنیم
+  React.useEffect(() => {
+    if (editingCar) {
+      setName(editingCar.name);
+      setMileage(editingCar.currentMileage.toString());
+      setSelectedCategory(editingCar.category);
+      setCategoryQuery(editingCar.category || '');
+    } else {
+      setName('');
+      setMileage('');
+      setError('');
+      setCategoryQuery('');
+      setSelectedCategory(undefined);
+    }
+  }, [editingCar, isOpen]);
 
   const filteredCategories = useMemo(
     () =>
@@ -35,20 +52,22 @@ export const AddCarModal: React.FC<AddCarModalProps> = ({ isOpen, onClose, onSav
       return;
     }
 
-    const newCar: Car = {
-      id: crypto.randomUUID(),
-      name: name || 'خودروی جدید من',
+    const carData: Car = {
+      id: editingCar?.id || crypto.randomUUID(),
+      name: name || (editingCar ? editingCar.name : 'خودروی جدید من'),
       category: selectedCategory,
       currentMileage: Number(mileage),
       lastUpdated: new Date().toISOString(),
     };
 
-    onSave(newCar);
-    setName('');
-    setMileage('');
-    setError('');
-    setCategoryQuery('');
-    setSelectedCategory(undefined);
+    onSave(carData);
+    if (!editingCar) {
+      setName('');
+      setMileage('');
+      setError('');
+      setCategoryQuery('');
+      setSelectedCategory(undefined);
+    }
   };
 
   return (
@@ -60,8 +79,12 @@ export const AddCarModal: React.FC<AddCarModalProps> = ({ isOpen, onClose, onSav
               <CarIcon className="w-5 h-5 text-blue-600" />
             </div>
             <div className="flex flex-col">
-              <h2 className="text-sm font-bold text-slate-900">افزودن خودروی جدید</h2>
-              <p className="text-[11px] text-slate-500">برای این خودرو یک نام و کیلومتر فعلی ثبت کنید.</p>
+              <h2 className="text-sm font-bold text-slate-900">
+                {editingCar ? 'ویرایش خودرو' : 'افزودن خودروی جدید'}
+              </h2>
+              <p className="text-[11px] text-slate-500">
+                {editingCar ? 'اطلاعات خودرو را ویرایش کنید.' : 'برای این خودرو یک نام و کیلومتر فعلی ثبت کنید.'}
+              </p>
             </div>
           </div>
           <button
@@ -135,7 +158,7 @@ export const AddCarModal: React.FC<AddCarModalProps> = ({ isOpen, onClose, onSav
               انصراف
             </Button>
             <Button type="submit" className="flex-1">
-              ثبت خودرو
+              {editingCar ? 'ذخیره تغییرات' : 'ثبت خودرو'}
             </Button>
           </div>
         </form>
